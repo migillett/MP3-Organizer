@@ -5,12 +5,25 @@ import shutil
 from tinytag import TinyTag, TinyTagException
 
 source_folder = ''
+
 destination_folder = ''
+
+
+def copy_file(source, destination):
+    if not os.path.isfile(destination):
+        shutil.copy(source, destination)
+        print('Copied file:', source, 'to', destination)
+    else:
+        print('Skipped file', source)
 
 
 def main(source, destination):
 
     os.chdir(source)
+
+    error_folder = os.path.join(destination, 'Corrupted files')
+    if not os.path.exists(error_folder):
+        os.mkdir(error_folder)
 
     for root, dirs, files in os.walk('.', topdown=False):
 
@@ -20,37 +33,34 @@ def main(source, destination):
 
                 file_source = os.path.join(root, audio_file)
 
-                error_folder = os.path.join(destination, 'Corrupted files')
-                if not os.path.exists(error_folder):
-                    os.mkdir(error_folder)
+                error_save = os.path.join(error_folder, audio_file)
 
                 try:
                     track = TinyTag.get(os.path.join(root, audio_file))
                     track_genre = track.genre
                     try:
                         track_genre = track_genre.replace('/', '_')
+
+                        genre_folder = os.path.join(destination, track_genre)
+
+                        if not os.path.exists(genre_folder):
+                            os.mkdir(genre_folder)
+
+                        file_destination = os.path.join(genre_folder, audio_file)
+
+                        if not os.path.isfile(file_destination):
+                            copy_file(file_source, file_destination)
+
                     except AttributeError:
-                        print('Error copying file', track.title)
+                        print('Error copying file: {0}. Saving to error folder'.format(track.title))
+                        copy_file(file_source, error_save)
                         continue
-
-                    genre_folder = os.path.join(destination, track_genre)
-
-                    if not os.path.exists(genre_folder):
-                        os.mkdir(genre_folder)
-
-                    file_destination = os.path.join(genre_folder, audio_file)
-
-                    if not os.path.isfile(file_destination):
-                        shutil.copyfile(file_source, file_destination)
-                        print('Moved', audio_file, 'to', file_destination)
-                    else:
-                        print('Skipped file:', audio_file)
 
                 except TinyTagException:
                     print('Error reading ID3 tag for file:', audio_file)
-                    error_save = os.path.join(error_folder, audio_file)
                     if not os.path.isfile(error_save):
-                        shutil.copyfile(file_source, error_save)
+                        copy_file(file_source, error_save)
+                    continue
 
 
 if __name__ == '__main__':
