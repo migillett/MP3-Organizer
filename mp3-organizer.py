@@ -3,10 +3,23 @@
 import os
 import shutil
 from tinytag import TinyTag, TinyTagException
+from pydub import AudioSegment
 
 source_folder = ''
 
 destination_folder = ''
+
+
+def normalize_audio(audio_file):
+    audio_file = audio_file.split('.')
+    sound = AudioSegment.from_file(audio_file[0], audio_file[1])
+    normalized_sound = match_target_amplitude(sound, -20.0)
+    normalized_sound.export("{0}.mp3".format(audio_file[0]), format="mp3")
+
+
+def match_target_amplitude(sound, target):
+    change_in_db = target - sound.dBFS
+    return sound.apply_gain(change_in_db)
 
 
 def copy_file(source, destination):
